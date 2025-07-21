@@ -110,10 +110,10 @@ const Index = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-6xl text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            Scholar Sight Explorer
+            ATIP
           </h1>
           <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Discover, analyze, and compare researchers worldwide with our AI-powered analytics platform. 
+            AI Talent Insights Platform - Discover, analyze, and compare researchers worldwide with our AI-powered analytics platform. 
             Explore academic networks, track research momentum, and find the leaders in your field.
           </p>
           

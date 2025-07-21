@@ -42,7 +42,7 @@ const Navigation = () => {
               <Search className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Scholar Sight
+              ATIP
             </span>
           </Link>
 
