@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ExternalLink, 
@@ -23,79 +23,29 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// Sample profile data
-const profileData = {
-  'sarah-chen': {
-    name: 'Dr. Sarah Chen',
-    affiliation: 'Stanford University',
-    homepage: 'https://cs.stanford.edu/~schen',
-    careerLength: '12 years',
-    totalPapers: 127,
-    totalCitations: 15420,
-    hIndex: 42,
-    aiSummary: "Dr. Sarah Chen is a pioneering researcher in machine learning and artificial intelligence. Her work focuses on neural network architectures and their applications in computer vision. She's known for groundbreaking contributions to deep learning optimization and has mentored numerous successful PhD students.",
-    metrics: {
-      impact: 95,
-      productivity: 88,
-      quality: 92,
-      momentum: 85,
-      collaboration: 90,
-      influence: 94
-    },
-    coauthors: [
-      { name: 'M. Rodriguez', initials: 'MR', papers: 23, strength: 5 },
-      { name: 'A. Johnson', initials: 'AJ', papers: 18, strength: 4 },
-      { name: 'K. Zhang', initials: 'KZ', papers: 15, strength: 3 },
-      { name: 'D. Smith', initials: 'DS', papers: 12, strength: 3 },
-      { name: 'L. Wang', initials: 'LW', papers: 10, strength: 2 }
-    ],
-    publications: [
-      {
-        title: 'Transformer Networks for Computer Vision: A Comprehensive Survey',
-        venue: 'Nature Machine Intelligence',
-        year: 2023,
-        citations: 1245,
-        authors: ['S. Chen', 'M. Rodriguez', 'A. Johnson'],
-        abstract: 'This comprehensive survey examines the application of transformer architectures in computer vision tasks, providing insights into current trends and future directions.',
-        isAwarded: true
-      },
-      {
-        title: 'Efficient Neural Architecture Search with Progressive Optimization',
-        venue: 'ICML',
-        year: 2023,
-        citations: 892,
-        authors: ['S. Chen', 'K. Zhang'],
-        abstract: 'We propose a novel approach to neural architecture search that reduces computational overhead while maintaining high performance across various tasks.',
-        isAwarded: false
-      },
-      {
-        title: 'Federated Learning with Differential Privacy Guarantees',
-        venue: 'ICLR',
-        year: 2022,
-        citations: 2134,
-        authors: ['S. Chen', 'D. Smith', 'L. Wang', 'P. Kumar'],
-        abstract: 'This work presents a framework for federated learning that ensures strong differential privacy guarantees without significant performance degradation.',
-        isAwarded: true
-      }
-    ]
-  }
-};
+import { fetchAuthor, fetchAuthorPapers, fetchAuthorAuthorships } from '@/lib/api';
 
 const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
   const size = 200;
   const center = size / 2;
   const maxRadius = size / 2 - 20;
-  
-  const angles = Object.keys(metrics).map((_, i) => (i * 2 * Math.PI) / Object.keys(metrics).length - Math.PI / 2);
-  
-  const points = Object.values(metrics).map((value, i) => {
+
+  // Convert all metric values to numbers, defaulting to 0 if not a valid number
+  const metricValues = Object.values(metrics).map((v) => (typeof v === 'number' && !isNaN(v) ? v : 0));
+  const metricKeys = Object.keys(metrics);
+
+  // If all values are 0, show a fallback
+  if (metricValues.every((v) => v === 0)) {
+    return <div className="text-center text-muted-foreground">No metric data available</div>;
+  }
+
+  const angles = metricKeys.map((_, i) => (i * 2 * Math.PI) / metricKeys.length - Math.PI / 2);
+  const points = metricValues.map((value, i) => {
     const radius = (value / 100) * maxRadius;
     const x = center + radius * Math.cos(angles[i]);
     const y = center + radius * Math.sin(angles[i]);
     return { x, y, value };
   });
-
   const pathData = points.map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x},${point.y}`).join(' ') + ' Z';
 
   return (
@@ -114,7 +64,6 @@ const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
             opacity="0.3"
           />
         ))}
-        
         {/* Grid lines */}
         {angles.map((angle, i) => (
           <line
@@ -128,7 +77,6 @@ const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
             opacity="0.3"
           />
         ))}
-        
         {/* Data area */}
         <path
           d={pathData}
@@ -136,7 +84,6 @@ const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
           stroke="hsl(var(--primary))"
           strokeWidth="2"
         />
-        
         {/* Data points */}
         {points.map((point, i) => (
           <circle
@@ -147,9 +94,8 @@ const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
             fill="hsl(var(--primary))"
           />
         ))}
-        
         {/* Labels */}
-        {Object.keys(metrics).map((label, i) => {
+        {metricKeys.map((label, i) => {
           const labelRadius = maxRadius + 15;
           const x = center + labelRadius * Math.cos(angles[i]);
           const y = center + labelRadius * Math.sin(angles[i]);
@@ -172,7 +118,7 @@ const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
   );
 };
 
-const CoauthorNetwork = ({ coauthors }: { coauthors: Array<{name: string, initials: string, papers: number, strength: number}> }) => {
+const CoauthorNetwork = ({ coauthors }: { coauthors: Array<{author_id?: string | number; name: string; initials: string; papers: number; strength: number;}> }) => {
   const [hoveredAuthor, setHoveredAuthor] = useState<string | null>(null);
   
   return (
@@ -186,14 +132,14 @@ const CoauthorNetwork = ({ coauthors }: { coauthors: Array<{name: string, initia
         </div>
         
         {/* Co-authors in circle */}
-        {coauthors.map((coauthor, i) => {
-          const angle = (i * 2 * Math.PI) / coauthors.length;
+        {(coauthors || []).map((coauthor, i) => {
+          const angle = (i * 2 * Math.PI) / (coauthors.length || 1);
           const radius = 80;
           const x = radius * Math.cos(angle);
           const y = radius * Math.sin(angle);
           
           return (
-            <div key={coauthor.name} className="absolute top-1/2 left-1/2" style={{ transform: `translate(${x - 20}px, ${y - 20}px)` }}>
+            <div key={coauthor.author_id || coauthor.name || i} className="absolute top-1/2 left-1/2" style={{ transform: `translate(${x - 20}px, ${y - 20}px)` }}>
               {/* Connection line */}
               <svg className="absolute top-5 left-5 pointer-events-none" style={{ width: Math.abs(x) + 20, height: Math.abs(y) + 20, zIndex: -1 }}>
                 <line
@@ -235,9 +181,37 @@ const Profile = () => {
   const { id } = useParams<{ id: string }>();
   const [expandedPaper, setExpandedPaper] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'citations' | 'year' | 'venue'>('citations');
+  const [profile, setProfile] = useState<any>(null);
+  const [publications, setPublications] = useState<any[]>([]);
+  const [coauthors, setCoauthors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const profile = profileData[id as keyof typeof profileData];
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetchAuthor(id),
+      fetchAuthorPapers(id),
+      fetchAuthorAuthorships(id),
+    ])
+      .then(([author, papers, coauthorships]) => {
+        setProfile(author);
+        setPublications(papers);
+        // For now, just pass coauthorships to coauthors (replace with fetchAuthorCoauthors when available)
+        setCoauthors(coauthorships);
+      })
+      .catch(() => setError('Error loading profile'))
+      .finally(() => setLoading(false));
+  }, [id]);
 
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><p>Loading profile...</p></div>;
+  }
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-red-500">{error}</p></div>;
+  }
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -251,10 +225,22 @@ const Profile = () => {
     );
   }
 
-  const sortedPublications = [...profile.publications].sort((a, b) => {
-    if (sortBy === 'citations') return b.citations - a.citations;
-    if (sortBy === 'year') return b.year - a.year;
-    if (sortBy === 'venue') return a.venue.localeCompare(b.venue);
+  // Helper to safely get a field or 'N/A'
+  const safe = (val: any) => (val === undefined || val === null || val === '' ? 'N/A' : val);
+  const metrics = profile.metrics && Object.keys(profile.metrics).length > 0 ? profile.metrics : {
+    impact: 'N/A',
+    productivity: 'N/A',
+    quality: 'N/A',
+    momentum: 'N/A',
+    collaboration: 'N/A',
+    influence: 'N/A',
+  };
+  const aiSummary = safe(profile.aiSummary);
+
+  const sortedPublications = [...publications].sort((a, b) => {
+    if (sortBy === 'citations') return (b.citations || 0) - (a.citations || 0);
+    if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
+    if (sortBy === 'venue') return (a.venue || '').localeCompare(b.venue || '');
     return 0;
   });
 
@@ -293,7 +279,7 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Quote className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{profile.totalCitations.toLocaleString()} citations</span>
+                    <span className="text-sm">{typeof profile.totalCitations === 'number' ? profile.totalCitations.toLocaleString() : 'N/A'} citations</span>
                   </div>
                 </div>
 
@@ -302,7 +288,7 @@ const Profile = () => {
                     <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                       <span className="text-accent-foreground text-xs font-bold">AI</span>
                     </div>
-                    <p className="text-sm leading-relaxed">{profile.aiSummary}</p>
+                    <p className="text-sm leading-relaxed">{aiSummary}</p>
                   </div>
                 </div>
               </div>
@@ -329,7 +315,12 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <RadarChart metrics={profile.metrics} />
+              {/* Only render RadarChart if metrics is an object and has at least one numeric value */}
+              {metrics && Object.values(metrics).some((v) => typeof v === 'number' && !isNaN(v) && v !== 0) ? (
+                <RadarChart metrics={metrics} />
+              ) : (
+                <div className="text-center text-muted-foreground">No metric data available</div>
+              )}
             </CardContent>
           </Card>
 
@@ -342,7 +333,7 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CoauthorNetwork coauthors={profile.coauthors} />
+              <CoauthorNetwork coauthors={coauthors || []} />
             </CardContent>
           </Card>
         </div>
@@ -399,7 +390,7 @@ const Profile = () => {
                           <span>{paper.year}</span>
                           <div className="flex items-center gap-1">
                             <Quote className="h-3 w-3" />
-                            {paper.citations} citations
+                            {typeof paper.citations === 'number' ? paper.citations.toLocaleString() : (paper.citations ? paper.citations : 'N/A') + ' citations'}
                           </div>
                         </div>
                       </div>

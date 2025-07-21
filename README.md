@@ -71,3 +71,38 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Application Pages & Visuals
+
+This frontend project offers a modern, interactive academic analytics platform with the following main pages and visual features:
+
+### Home Page (`/`)
+- **Hero Section**: Project title, description, and a prominent search bar for researcher lookup.
+- **Database Statistics**: Visual cards showing key stats (e.g., researchers indexed, papers analyzed, venues covered).
+- **Mini Bar Chart**: Publications per year, visualized as a mini bar chart.
+- **Leaderboard Previews**: Card previews for top researchers in three metrics (ANCI, Acceleration, PQI), with quick links to full leaderboards.
+- **Researcher Spotlight**: Highlighted researcher with badge, profile summary, and direct link to their profile.
+
+### Leaderboards Page (`/leaderboards`)
+- **Metric Tabs**: Switch between ANCI, Acceleration, and PQI leaderboards, each with a description and icon.
+- **Filters & Sorting**: Filter researchers by affiliation and career stage, and sort by score.
+- **Leaderboard Table**: Interactive table showing rank, author, affiliation, score, papers, citations, career length, and quick profile links. Top 3 are visually highlighted.
+
+### Profile Page (`/profile/:id`)
+- **Header Section**: Researcher name, affiliation, homepage link, career stats, and AI-generated summary.
+- **Research Metrics Radar Chart**: Visualizes the researcher's scores across multiple dimensions (impact, productivity, quality, momentum, collaboration, influence).
+- **Co-author Network Visualization**: Circular network graph showing main co-authors, with interactive hover details.
+- **Publications List**: Sortable, expandable list of publications with venue, year, citation count, award badges, author list, and abstract.
+- **Compare Button**: Quick link to compare the researcher with others (feature coming soon).
+
+### Other Pages
+- **Compare** (`/compare`): Placeholder for future researcher comparison feature.
+- **Methodology** (`/methodology`): Placeholder for future methodology details.
+- **Affiliations** (`/affiliations/*`): Placeholder for future institution-based browsing.
+- **404 Not Found**: Friendly error page for invalid routes.
+
+### Visual & UI Technologies
+- **Component Library**: Built with shadcn-ui and Tailwind CSS for a modern, responsive design.
+- **Icons**: Uses Lucide icons for visual clarity.
+- **Cards, Tables, Tabs, Badges, Tooltips**: Rich UI primitives for data display and interactivity.
+- **Dark Mode**: Toggle available in navigation (if enabled).

@@ -4,23 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { fetchAuthors } from '@/lib/api';
 
 interface Researcher {
   id: string;
   name: string;
   affiliation: string;
 }
-
-// Sample researcher data for autocomplete
-const sampleResearchers: Researcher[] = [
-  { id: 'sarah-chen', name: 'Dr. Sarah Chen', affiliation: 'Stanford University' },
-  { id: 'michael-rodriguez', name: 'Prof. Michael Rodriguez', affiliation: 'MIT' },
-  { id: 'emily-watson', name: 'Dr. Emily Watson', affiliation: 'UC Berkeley' },
-  { id: 'james-liu', name: 'Dr. James Liu', affiliation: 'Carnegie Mellon' },
-  { id: 'anna-kowalski', name: 'Prof. Anna Kowalski', affiliation: 'Harvard University' },
-  { id: 'sarah-johnson', name: 'Dr. Sarah Johnson', affiliation: 'Google Research' },
-  { id: 'sarah-williams', name: 'Prof. Sarah Williams', affiliation: 'Oxford University' },
-];
 
 interface SearchBarProps {
   placeholder?: string;
@@ -35,19 +25,33 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [suggestions, setSuggestions] = useState<Researcher[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (query.trim().length > 0) {
-      const filtered = sampleResearchers.filter(researcher =>
-        researcher.name.toLowerCase().includes(query.toLowerCase()) ||
-        researcher.affiliation.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 5);
-      setSuggestions(filtered);
-      setShowSuggestions(true);
-      setSelectedIndex(-1);
+      setLoading(true);
+      setError(null);
+      fetchAuthors({ search: query, limit: 5 })
+        .then((authors) => {
+          setSuggestions(
+            authors.map((a: any) => ({
+              id: a.author_id?.toString() ?? '',
+              name: `${a.first_name} ${a.last_name}`.trim(),
+              affiliation: a.affiliation || '',
+            }))
+          );
+          setShowSuggestions(true);
+          setSelectedIndex(-1);
+        })
+        .catch((err) => {
+          setError('Error fetching suggestions');
+          setSuggestions([]);
+        })
+        .finally(() => setLoading(false));
     } else {
       setSuggestions([]);
       setShowSuggestions(false);

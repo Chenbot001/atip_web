@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Trophy, 
@@ -36,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { fetchRanking } from '@/lib/api';
 
 const metrics = [
   {
@@ -61,82 +62,56 @@ const metrics = [
   }
 ];
 
-// Sample leaderboard data
-const sampleData = {
-  anci: [
-    {
-      rank: 1,
-      name: 'Dr. Sarah Chen',
-      affiliation: 'Stanford University',
-      score: 95.8,
-      papers: 127,
-      citations: 15420,
-      careerLength: '12 years',
-      tags: ['Field Pioneer'],
-      id: 'sarah-chen'
-    },
-    {
-      rank: 2,
-      name: 'Prof. Michael Rodriguez',
-      affiliation: 'MIT',
-      score: 94.2,
-      papers: 89,
-      citations: 12340,
-      careerLength: '8 years',
-      tags: ['Rising Star'],
-      id: 'michael-rodriguez'
-    },
-    {
-      rank: 3,
-      name: 'Dr. Emily Watson',
-      affiliation: 'UC Berkeley',
-      score: 92.1,
-      papers: 156,
-      citations: 18230,
-      careerLength: '15 years',
-      tags: ['Field Pioneer'],
-      id: 'emily-watson'
-    },
-    // Add more sample data...
-  ],
-  accel: [
-    {
-      rank: 1,
-      name: 'Dr. James Liu',
-      affiliation: 'Carnegie Mellon',
-      score: 88.5,
-      papers: 45,
-      citations: 3420,
-      careerLength: '3 years',
-      tags: ['Rising Star'],
-      id: 'james-liu'
-    },
-    // More data...
-  ],
-  pqi: [
-    {
-      rank: 1,
-      name: 'Prof. Anna Kowalski',
-      affiliation: 'Harvard University',
-      score: 91.3,
-      papers: 78,
-      citations: 9870,
-      careerLength: '9 years',
-      tags: ['Quality Leader'],
-      id: 'anna-kowalski'
-    },
-    // More data...
-  ]
-};
-
 const Leaderboards = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeMetric = searchParams.get('metric') || 'anci';
   const [affiliationFilter, setAffiliationFilter] = useState('all');
   const [careerFilter, setCareerFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [data, setData] = useState<any>({ anci: [], cagr: [], pqi: [] });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const currentData = sampleData[activeMetric as keyof typeof sampleData] || sampleData.anci;
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetchRanking('anci', 100),
+      fetchRanking('cagr', 100),
+      fetchRanking('pqi', 100),
+    ])
+      .then(([anci, cagr, pqi]) => {
+        setData({ anci, cagr, pqi });
+      })
+      .catch(() => setError('Error loading leaderboards'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Filtering and sorting client-side
+  function filterAndSort(list: any[]) {
+    let filtered = list;
+    if (affiliationFilter !== 'all') {
+      filtered = filtered.filter((r) =>
+        r.affiliation?.toLowerCase().includes(affiliationFilter.toLowerCase())
+      );
+    }
+    if (careerFilter !== 'all') {
+      filtered = filtered.filter((r) => {
+        const years = r.careerLength || r.career_length || 0;
+        if (careerFilter === 'early') return years < 5;
+        if (careerFilter === 'mid') return years >= 5 && years <= 15;
+        if (careerFilter === 'senior') return years > 15;
+        return true;
+      });
+    }
+    filtered = [...filtered].sort((a, b) =>
+      sortOrder === 'asc' ? a.score - b.score : b.score - a.score
+    );
+    return filtered;
+  }
+
+  // Defensive: always use an array for currentData
+  const currentData = filterAndSort(Array.isArray(data[activeMetric]) ? data[activeMetric] : []);
 
   const handleMetricChange = (metric: string) => {
     setSearchParams({ metric });
@@ -253,92 +228,104 @@ const Leaderboards = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16 text-center">Rank</TableHead>
-                    <TableHead>Author</TableHead>
-                    <TableHead>Affiliation</TableHead>
-                    <TableHead className="text-center bg-accent/10">
-                      <Button variant="ghost" size="sm" className="h-auto p-0 font-medium">
-                        Score <ArrowUpDown className="ml-1 h-3 w-3" />
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-center">Papers</TableHead>
-                    <TableHead className="text-center">Citations</TableHead>
-                    <TableHead className="text-center">Career</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentData.map((researcher) => (
-                    <TableRow key={researcher.id} className="hover:bg-muted/50">
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center">
-                          <span className="text-2xl font-bold text-muted-foreground">
-                            {researcher.rank}
-                          </span>
-                          {researcher.rank <= 3 && (
-                            <Trophy className="h-4 w-4 ml-1 text-yellow-500" />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="font-medium">{researcher.name}</div>
-                            <div className="flex gap-1 mt-1">
-                              {researcher.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag === 'Rising Star' && <Star className="h-3 w-3 mr-1" />}
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {researcher.affiliation}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center bg-accent/5">
-                        <span className="text-lg font-bold text-primary">
-                          {researcher.score}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <BookOpen className="h-3 w-3 text-muted-foreground" />
-                          {researcher.papers}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Quote className="h-3 w-3 text-muted-foreground" />
-                          {researcher.citations.toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-sm text-muted-foreground">
-                          {researcher.careerLength}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button asChild variant="outline" size="sm">
-                          <Link to={`/profile/${researcher.id}`}>
-                            <Eye className="h-3 w-3 mr-1" />
-                            View Profile
-                          </Link>
+            {loading && <p className="text-center py-8">Loading leaderboards...</p>}
+            {error && <p className="text-center py-8 text-red-500">{error}</p>}
+            {!loading && !error && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16 text-center">Rank</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Affiliation</TableHead>
+                      <TableHead className="text-center bg-accent/10">
+                        <Button variant="ghost" size="sm" className="h-auto p-0 font-medium">
+                          Score <ArrowUpDown className="ml-1 h-3 w-3" />
                         </Button>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead className="text-center">Papers</TableHead>
+                      <TableHead className="text-center">Citations</TableHead>
+                      <TableHead className="text-center">Career</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {(currentData || []).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No data available for this leaderboard.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (currentData || []).map((researcher, index) => (
+                        <TableRow key={researcher.id || researcher.author_id || index} className="hover:bg-muted/50">
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center">
+                              <span className="text-2xl font-bold text-muted-foreground">
+                                {index + 1}
+                              </span>
+                              {index < 3 && (
+                                <Trophy className="h-4 w-4 ml-1 text-yellow-500" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="font-medium">{researcher.name || `${researcher.first_name || ''} ${researcher.last_name || ''}`}</div>
+                                <div className="flex gap-1 mt-1">
+                                  {(researcher.tags || []).map((tag: string) => (
+                                    <Badge key={tag} variant="secondary" className="text-xs">
+                                      {tag === 'Rising Star' && <Star className="h-3 w-3 mr-1" />}
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {researcher.affiliation || 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center bg-accent/5">
+                            <span className="text-lg font-bold text-primary">
+                              {researcher.score || 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <BookOpen className="h-3 w-3 text-muted-foreground" />
+                              {researcher.papers || researcher.publication_count || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Quote className="h-3 w-3 text-muted-foreground" />
+                              {(researcher.citations || researcher.citation_count || 0).toLocaleString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="text-sm text-muted-foreground">
+                              {researcher.careerLength || researcher.career_length || 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button asChild variant="outline" size="sm">
+                              <Link to={`/profile/${researcher.id || researcher.author_id}`}>
+                                <Eye className="h-3 w-3 mr-1" />
+                                View Profile
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
