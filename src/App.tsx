@@ -8,6 +8,7 @@ import Homepage from "./pages/Homepage";
 import Leaderboards from "./pages/Leaderboards";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import APIDebug from './pages/APIDebug';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/compare" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-3xl font-bold">Compare Feature Coming Soon</h1></div>} />
             <Route path="/methodology" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-3xl font-bold">Methodology Page Coming Soon</h1></div>} />
             <Route path="/affiliations/*" element={<div className="container mx-auto px-4 py-20 text-center"><h1 className="text-3xl font-bold">Affiliations Page Coming Soon</h1></div>} />
+            <Route path="/api-debug" element={<APIDebug />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

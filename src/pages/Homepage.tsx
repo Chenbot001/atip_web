@@ -17,30 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import SearchBar from '@/components/SearchBar';
 import { fetchStatsOverview, fetchRanking } from '@/lib/api';
 
-const publicationYearData = [
-  { year: 2019, count: 45000 },
-  { year: 2020, count: 52000 },
-  { year: 2021, count: 58000 },
-  { year: 2022, count: 61000 },
-  { year: 2023, count: 67000 }
-];
-
-const MiniChart = () => {
-  const maxCount = Math.max(...publicationYearData.map(d => d.count));
-  return (
-    <div className="flex items-end gap-1 h-16">
-      {publicationYearData.map((data, index) => (
-        <div key={data.year} className="flex flex-col items-center gap-1 flex-1">
-          <div
-            className="bg-primary rounded-t w-full transition-all hover:bg-primary/80"
-            style={{ height: `${(data.count / maxCount) * 100}%` }}
-          />
-          <span className="text-xs text-muted-foreground">{data.year}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
+// Remove publicationYearData and MiniChart
 
 const Homepage = () => {
   const [stats, setStats] = useState<any>(null);
@@ -158,21 +135,6 @@ const Homepage = () => {
               </CardContent>
             </Card>
           </div>
-          {/* Mini Chart */}
-          <Card className="max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Publications Per Year
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MiniChart />
-              <p className="text-sm text-muted-foreground text-center mt-2">
-                Growing at 8% annually
-              </p>
-            </CardContent>
-          </Card>
         </section>
 
         {/* Leaderboard Previews */}
@@ -236,9 +198,8 @@ const Homepage = () => {
                       </Badge>
                     </div>
                     <h3 className="text-2xl font-bold mb-1">{safe(spotlightAuthor?.first_name)} {safe(spotlightAuthor?.last_name)}</h3>
-                    <p className="text-lg text-primary font-semibold mb-2">{safe(spotlightAuthor?.title)}</p>
-                    <p className="text-muted-foreground mb-4">{safe(spotlightAuthor?.affiliation)}</p>
-                    <p className="leading-relaxed">{safe(spotlightAuthor?.description)}</p>
+                    <p className="text-lg text-primary font-semibold mb-2">{safe(spotlightAuthor?.affiliation)}</p>
+                    <p className="leading-relaxed">AI-generated summary of author...</p>
                   </div>
                   <div className="flex-shrink-0">
                     <Button>

@@ -104,14 +104,28 @@ const Leaderboards = () => {
         return true;
       });
     }
-    filtered = [...filtered].sort((a, b) =>
-      sortOrder === 'asc' ? a.score - b.score : b.score - a.score
-    );
+    filtered = [...filtered].sort((a, b) => {
+      const getScore = (researcher: any) => {
+        if (activeMetric === 'pqi') return researcher.pqi || 0;
+        if (activeMetric === 'anci') return researcher.adj_anci_p_frac || 0;
+        if (activeMetric === 'accel') return researcher.cagr || 0;
+        return 0;
+      };
+      const scoreA = getScore(a);
+      const scoreB = getScore(b);
+      return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+    });
     return filtered;
   }
 
+  // Fix: map 'accel' to 'cagr' for data and metric
+  const metricToDataKey = (metric: string) => {
+    if (metric === 'accel') return 'cagr';
+    return metric;
+  };
+
   // Defensive: always use an array for currentData
-  const currentData = filterAndSort(Array.isArray(data[activeMetric]) ? data[activeMetric] : []);
+  const currentData = filterAndSort(Array.isArray(data[metricToDataKey(activeMetric)]) ? data[metricToDataKey(activeMetric)] : []);
 
   const handleMetricChange = (metric: string) => {
     setSearchParams({ metric });
@@ -291,24 +305,26 @@ const Leaderboards = () => {
                           </TableCell>
                           <TableCell className="text-center bg-accent/5">
                             <span className="text-lg font-bold text-primary">
-                              {researcher.score || 'N/A'}
+                              {activeMetric === 'pqi' ? (researcher.pqi || 'N/A') :
+                               activeMetric === 'anci' ? (researcher.adj_anci_p_frac || 'N/A') :
+                               activeMetric === 'accel' ? (researcher.cagr || 'N/A') : 'N/A'}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1">
                               <BookOpen className="h-3 w-3 text-muted-foreground" />
-                              {researcher.papers || researcher.publication_count || 'N/A'}
+                              {researcher.publication_count || 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1">
                               <Quote className="h-3 w-3 text-muted-foreground" />
-                              {(researcher.citations || researcher.citation_count || 0).toLocaleString()}
+                              {(researcher.citations || 0).toLocaleString()}
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <span className="text-sm text-muted-foreground">
-                              {researcher.careerLength || researcher.career_length || 'N/A'}
+                              {researcher.career_length || 'N/A'}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
