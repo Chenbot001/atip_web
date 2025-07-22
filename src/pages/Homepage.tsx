@@ -61,7 +61,7 @@ const Homepage = () => {
       icon: <Trophy className="h-6 w-6 text-yellow-600" />,
     },
     {
-      key: 'cagr',
+      key: 'accel',
       title: 'Acceleration Leaders',
       description: 'Research momentum tracking',
       icon: <TrendingUp className="h-6 w-6 text-green-600" />,
@@ -142,7 +142,9 @@ const Homepage = () => {
           <h2 className="text-3xl font-bold text-center mb-8">Research Leaderboards</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {leaderboardConfigs.map((config) => {
-              const lb = leaderboards[config.key] || [];
+              // Map 'accel' key to 'cagr' data for the Acceleration Leaders
+              const dataKey = config.key === 'accel' ? 'cagr' : config.key;
+              const lb = leaderboards[dataKey] || [];
               return (
                 <Card key={config.key} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardHeader>
