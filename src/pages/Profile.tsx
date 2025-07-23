@@ -25,98 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchAuthor, fetchAuthorPapers, fetchAuthorAuthorships } from '@/lib/api';
 
-const RadarChart = ({ metrics }: { metrics: Record<string, number> }) => {
-  const size = 200;
-  const center = size / 2;
-  const maxRadius = size / 2 - 20;
-
-  // Convert all metric values to numbers, defaulting to 0 if not a valid number
-  const metricValues = Object.values(metrics).map((v) => (typeof v === 'number' && !isNaN(v) ? v : 0));
-  const metricKeys = Object.keys(metrics);
-
-  // If all values are 0, show a fallback
-  if (metricValues.every((v) => v === 0)) {
-    return <div className="text-center text-muted-foreground">No metric data available</div>;
-  }
-
-  const angles = metricKeys.map((_, i) => (i * 2 * Math.PI) / metricKeys.length - Math.PI / 2);
-  const points = metricValues.map((value, i) => {
-    const radius = (value / 100) * maxRadius;
-    const x = center + radius * Math.cos(angles[i]);
-    const y = center + radius * Math.sin(angles[i]);
-    return { x, y, value };
-  });
-  const pathData = points.map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x},${point.y}`).join(' ') + ' Z';
-
-  return (
-    <div className="flex flex-col items-center">
-      <svg width={size} height={size} className="mb-4">
-        {/* Grid circles */}
-        {[20, 40, 60, 80, 100].map((percent) => (
-          <circle
-            key={percent}
-            cx={center}
-            cy={center}
-            r={(percent / 100) * maxRadius}
-            fill="none"
-            stroke="hsl(var(--border))"
-            strokeWidth="1"
-            opacity="0.3"
-          />
-        ))}
-        {/* Grid lines */}
-        {angles.map((angle, i) => (
-          <line
-            key={i}
-            x1={center}
-            y1={center}
-            x2={center + maxRadius * Math.cos(angle)}
-            y2={center + maxRadius * Math.sin(angle)}
-            stroke="hsl(var(--border))"
-            strokeWidth="1"
-            opacity="0.3"
-          />
-        ))}
-        {/* Data area */}
-        <path
-          d={pathData}
-          fill="hsl(var(--primary) / 0.2)"
-          stroke="hsl(var(--primary))"
-          strokeWidth="2"
-        />
-        {/* Data points */}
-        {points.map((point, i) => (
-          <circle
-            key={i}
-            cx={point.x}
-            cy={point.y}
-            r="4"
-            fill="hsl(var(--primary))"
-          />
-        ))}
-        {/* Labels */}
-        {metricKeys.map((label, i) => {
-          const labelRadius = maxRadius + 15;
-          const x = center + labelRadius * Math.cos(angles[i]);
-          const y = center + labelRadius * Math.sin(angles[i]);
-          return (
-            <text
-              key={i}
-              x={x}
-              y={y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="12"
-              fill="hsl(var(--foreground))"
-            >
-              {label}
-            </text>
-          );
-        })}
-      </svg>
-    </div>
-  );
-};
+// Remove RadarChart import and component
 
 const CoauthorNetwork = ({ coauthors }: { coauthors: Array<{author_id?: string | number; name: string; initials: string; papers: number; strength: number;}> }) => {
   const [hoveredAuthor, setHoveredAuthor] = useState<string | null>(null);
@@ -197,9 +106,26 @@ const Profile = () => {
       fetchAuthorAuthorships(id),
     ])
       .then(([author, papers, coauthorships]) => {
-        setProfile(author);
+        // Map backend fields to frontend expected fields
+        const mappedProfile = {
+          name: (author.first_name || '') + (author.last_name ? ' ' + author.last_name : ''),
+          affiliation: author.affiliation || 'N/A',
+          careerLength: author.career_length ?? 'N/A',
+          totalPapers: author.publication_count ?? 'N/A',
+          totalCitations: author.citations ?? 'N/A',
+          hIndex: author.h_index ?? 'N/A',
+          authorId: author.author_id,
+          metrics: {
+            ANCI: author.adj_anci_p_frac ?? 0,
+            CAGR: author.cagr ?? 0,
+            LTSD: author.ltsd ?? 0,
+            PQI: author.pqi ?? 0,
+            "First Author Dominance": author.first_author_dominance ?? 0,
+          },
+          // aiSummary: author.ai_summary ?? '', // Uncomment if/when available
+        };
+        setProfile(mappedProfile);
         setPublications(papers);
-        // For now, just pass coauthorships to coauthors (replace with fetchAuthorCoauthors when available)
         setCoauthors(coauthorships);
       })
       .catch(() => setError('Error loading profile'))
@@ -228,19 +154,25 @@ const Profile = () => {
   // Helper to safely get a field or 'N/A'
   const safe = (val: any) => (val === undefined || val === null || val === '' ? 'N/A' : val);
   const metrics = profile.metrics && Object.keys(profile.metrics).length > 0 ? profile.metrics : {
-    impact: 'N/A',
-    productivity: 'N/A',
-    quality: 'N/A',
-    momentum: 'N/A',
-    collaboration: 'N/A',
-    influence: 'N/A',
+    ANCI: 'N/A',
+    "ANCI (P)": 'N/A',
+    "Adj. ANCI": 'N/A',
+    "Adj. ANCI (P)": 'N/A',
+    CAGR: 'N/A',
+    LTSD: 'N/A',
+    PQI: 'N/A',
+    "First Author Dominance": 'N/A',
   };
-  const aiSummary = safe(profile.aiSummary);
+  // const aiSummary = safe(profile.aiSummary); // Uncomment if/when available
 
   const sortedPublications = [...publications].sort((a, b) => {
-    if (sortBy === 'citations') return (b.citations || 0) - (a.citations || 0);
+    if (sortBy === 'citations') return (b.citation_count || 0) - (a.citation_count || 0);
     if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
-    if (sortBy === 'venue') return (a.venue || '').localeCompare(b.venue || '');
+    if (sortBy === 'venue') {
+      const venueCompare = (a.venue || '').localeCompare(b.venue || '');
+      if (venueCompare !== 0) return venueCompare;
+      return (b.year || 0) - (a.year || 0); // Most recent first within same venue
+    }
     return 0;
   });
 
@@ -283,13 +215,12 @@ const Profile = () => {
                   </div>
                 </div>
 
-                <div className="bg-accent/10 border-l-4 border-accent p-4 rounded-r-lg">
-                  <div className="flex items-start gap-2">
-                    <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-accent-foreground text-xs font-bold">AI</span>
-                    </div>
-                    <p className="text-sm leading-relaxed">{aiSummary}</p>
+                {/* AI Summary Section - now with placeholder text */}
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-accent-foreground text-xs font-bold">AI</span>
                   </div>
+                  <p className="text-sm leading-relaxed">AI-generated summary of author...</p>
                 </div>
               </div>
 
@@ -315,12 +246,15 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Only render RadarChart if metrics is an object and has at least one numeric value */}
-              {metrics && Object.values(metrics).some((v) => typeof v === 'number' && !isNaN(v) && v !== 0) ? (
-                <RadarChart metrics={metrics} />
-              ) : (
-                <div className="text-center text-muted-foreground">No metric data available</div>
-              )}
+              {/* Display metrics as boxes in a grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(metrics).map(([key, value]) => (
+                  <div key={key} className="bg-accent/10 rounded-lg p-4 flex flex-col items-center justify-center border">
+                    <div className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">{key}</div>
+                    <div className="text-2xl font-bold text-primary">{typeof value === 'number' ? value : String(value) || 'N/A'}</div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
@@ -390,7 +324,7 @@ const Profile = () => {
                           <span>{paper.year}</span>
                           <div className="flex items-center gap-1">
                             <Quote className="h-3 w-3" />
-                            {typeof paper.citations === 'number' ? paper.citations.toLocaleString() : (paper.citations ? paper.citations : 'N/A') + ' citations'}
+                            {typeof paper.citation_count === 'number' ? paper.citation_count.toLocaleString() : (paper.citation_count ? paper.citation_count : 'N/A') + ' citations'}
                           </div>
                         </div>
                       </div>
