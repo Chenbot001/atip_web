@@ -19,13 +19,6 @@ const TEST_PAPER_ID = 219965343;
 
 const endpointTests = [
   {
-    name: 'Health',
-    fn: async () => {
-      const res = await fetch('http://18.143.177.82/health');
-      return { status: res.status, data: await res.text() };
-    }
-  },
-  {
     name: 'API Info',
     fn: async () => {
       const res = await fetch('http://18.143.177.82/');
@@ -150,15 +143,15 @@ const APIDebug: React.FC = () => {
           </button>
         )}
       </div>
-      <div className="mb-4 text-sm text-gray-600">
+      <div className="mb-4 text-sm text-muted-foreground">
         Testing with Author ID: {TEST_AUTHOR_ID}, Paper ID: {TEST_PAPER_ID}
       </div>
       {loading && <div>Loading all endpoints...</div>}
       <div className="space-y-6">
         {results.map((r, i) => (
-          <div key={i} className="border rounded p-4 bg-gray-50">
-            <div className="font-semibold mb-2">{r.name} <span className="text-xs text-gray-500">[{r.status}]</span></div>
-            <pre className="overflow-x-auto text-xs bg-white p-2 rounded border max-h-64">{typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2)}</pre>
+          <div key={i} className="border rounded p-4 bg-card">
+            <div className="font-semibold mb-2">{r.name} <span className="text-xs text-muted-foreground">[{r.status}]</span></div>
+            <pre className="overflow-x-auto text-xs bg-background p-2 rounded border max-h-64 text-foreground">{typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2)}</pre>
           </div>
         ))}
       </div>
