@@ -1,6 +1,6 @@
 // Central API utility for ATIP backend
 
-const API_BASE_URL = 'http://18.143.177.82'; // Updated to remote AWS server IP
+const API_BASE_URL = ''; // Use relative URLs - nginx will proxy to backend
 
 // Helper for GET requests
 async function apiGet<T>(endpoint: string, params?: Record<string, any>): Promise<T> {

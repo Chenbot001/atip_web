@@ -8,9 +8,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true,
     port: 8080,
-    allowedHosts: [
-      "secure-growing-ladybug.ngrok-free.app",
-    ],
   },
   plugins: [
     react(),
